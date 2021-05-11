@@ -14,6 +14,7 @@ using System.IO;
 using Cleverbit.CodingTask.Application.DTO.Authentication;
 using Cleverbit.CodingTask.Application.ServiceImplementations;
 using Cleverbit.CodingTask.Application.Services;
+using Cleverbit.CodingTask.Data.DateAndTime;
 using Cleverbit.CodingTask.Host.Filters;
 using FluentValidation.AspNetCore;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,7 @@ namespace Cleverbit.CodingTask.Host {
 
             // utility services
             services.AddSingleton<IHashService>(new HashService(configuration.GetSection("HashSalt").Get<string>()));
+            services.AddSingleton<IClock, DefaultClock>();
 
             // application services
             services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -57,18 +59,28 @@ namespace Cleverbit.CodingTask.Host {
                 .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 
             services.AddSwaggerGen();
+
+            services.AddCors();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHashService hashService, CodingTaskContext context, 
-            ILoggerFactory loggerFactory) {
+            ILoggerFactory loggerFactory, IClock clock) {
 
+            // initialize database
             try {
-                context.Initialize(hashService).Wait();
+                context.Initialize(hashService, clock).Wait();
             } catch (Exception ex) {
                 var logger = loggerFactory.CreateLogger("startup");
                 logger.LogError(ex, "An error occurred creating the DB.");
             }
+
+            // global cors policy
+            app.UseCors(x => x
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowed(origin => true) // allow any origin
+                .AllowCredentials()); // allow credentials
 
             if (env.IsDevelopment()) {
                 app.UseDeveloperExceptionPage();

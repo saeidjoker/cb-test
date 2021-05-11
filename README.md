@@ -1,5 +1,22 @@
 # Cleverbit Coding Task Task Template
 
+## Front-End
+
+Front-end is written with Vue & Vuetify.
+Simply goto `./cb` folder and execute these:
+
+```bash
+npm i
+npm run service
+```
+
+## Back-End
+
+Swagger endpoints are available at `https://localhost:5001`
+
+
+## Original Description
+
 This template should be used for coding tasks of Cleverbit.
 
 Three projects are included in this solution:

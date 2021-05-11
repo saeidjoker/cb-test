@@ -3,6 +3,7 @@ using Cleverbit.CodingTask.Utilities;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using Cleverbit.CodingTask.Data.DateAndTime;
 using Cleverbit.CodingTask.Data.Models;
 
 namespace Cleverbit.CodingTask.Data {
@@ -15,20 +16,20 @@ namespace Cleverbit.CodingTask.Data {
         /// <param name="context"></param>
         /// <param name="hashService"></param>
         /// <returns></returns>
-        public static async Task Initialize(this CodingTaskContext context, IHashService hashService) {
+        public static async Task Initialize(this CodingTaskContext context, IHashService hashService, IClock clock) {
             await context.Database.EnsureCreatedAsync();
             await initializeUsers(context, hashService);
-            await initializeMatches(context);
+            await initializeMatches(context, clock);
         }
 
         // seeds some sample matches (each 10 seconds there will be a match)
         // todo: remove this in production
-        private static async Task initializeMatches(CodingTaskContext context) {
+        private static async Task initializeMatches(CodingTaskContext context, IClock clock) {
             if (await context.Matches.AnyAsync()) {
                 return;
             }
 
-            var now = DateTime.UtcNow;
+            var now = clock.Now();
             for (var i = 0; i < 1000; i++) {
                 await context.Matches.AddRangeAsync(new Match {
                     Id = Guid.NewGuid(),

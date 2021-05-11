@@ -6,6 +6,7 @@ using Cleverbit.CodingTask.Application.Models.Exceptions;
 using Cleverbit.CodingTask.Application.Models.Shared;
 using Cleverbit.CodingTask.Application.Services;
 using Cleverbit.CodingTask.Data;
+using Cleverbit.CodingTask.Data.DateAndTime;
 using Cleverbit.CodingTask.Data.Models;
 using Cleverbit.CodingTask.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -18,13 +19,16 @@ namespace Cleverbit.CodingTask.Application.ServiceImplementations {
 
         private readonly CodingTaskContext db;
         private readonly IScoreGenerator scoreGenerator;
-        public MatchService(CodingTaskContext db, IScoreGenerator scoreGenerator) {
+        private readonly IClock clock;
+
+        public MatchService(CodingTaskContext db, IScoreGenerator scoreGenerator, IClock clock) {
             this.db = db;
             this.scoreGenerator = scoreGenerator;
+            this.clock = clock;
         }
 
         public async Task<Match> GetCurrentMatchToPlay(int userId) {
-            var now = DateTime.UtcNow.ToUnixTime();
+            var now = clock.Now().ToUnixTime();
 
             var found = await db.Matches
                 .AsNoTracking()
@@ -50,7 +54,7 @@ namespace Cleverbit.CodingTask.Application.ServiceImplementations {
         }
 
         public async Task<Page<FinishedMatchModel>> GetFinishedMatches(int pageIndex) {
-            var now = DateTime.UtcNow.ToUnixTime();
+            var now = clock.Now().ToUnixTime();
             int skip = (int) (PageSize * pageIndex);
             int take = (int) PageSize;
 
@@ -63,38 +67,44 @@ namespace Cleverbit.CodingTask.Application.ServiceImplementations {
                 })
                 .SelectMany(a => a.plays.DefaultIfEmpty(), (a, play) => new {
                     a.match,
-                    play,
-                    isWinner = play.Score == a.plays.Max(x => x.Score)
+                    play
                 })
                 .GroupJoin(db.Users, a => a.play.UserId, user => user.Id, (a, users) => new {
                     a.match,
                     a.play,
-                    users,
-                    a.isWinner,
-                    winnerScore = a.isWinner ? a.play.Score : 0
+                    users
                 })
                 .SelectMany(a => a.users.DefaultIfEmpty(), (a, user) => new {
                     a.match,
                     a.play,
-                    user,
-                    a.isWinner,
-                    a.winnerScore
+                    user
                 })
-                .Where(a => a.isWinner)
+                // todo: fix this later!!! This loads everything in memory. I hate EF
+                .AsEnumerable()
+                .GroupBy(a => new {
+                    a.match.Id,
+                    a.match.ExpiresTimestamp,
+                    a.user
+                })
+                .Where(a => a.Key.user != null)
+                .Select(a => new {
+                    item = a.Key,
+                    winnerScore = a.Max(aa => aa.play.Score)
+                })
                 .Select(a => new FinishedMatchModel {
-                    MatchId = a.match.Id,
-                    ExpiresTimestamp = a.match.ExpiresTimestamp,
-                    WinnerUserName = a.user.UserName,
+                    MatchId = a.item.Id,
+                    ExpiresTimestamp = a.item.ExpiresTimestamp,
+                    WinnerUserName = a.item.user.UserName,
                     WinnerScore = a.winnerScore
                 });
 
-            var total = await query.CountAsync();
+            var total = query.Count();
 
-            var items = await query
+            var items = query
                 .OrderByDescending(a => a.ExpiresTimestamp)
                 .Skip(skip)
                 .Take(take)
-                .ToListAsync();
+                .ToList();
 
             return new Page<FinishedMatchModel> {
                 Items = items,
@@ -111,7 +121,6 @@ namespace Cleverbit.CodingTask.Application.ServiceImplementations {
         }
 
         public async Task Play(int userId, Guid matchId) {
-
             if (await matchExists(matchId) == false) {
                 throw new ApiError(StatusCodes.Status404NotFound, "Match was not found!");
             }
@@ -122,7 +131,7 @@ namespace Cleverbit.CodingTask.Application.ServiceImplementations {
 
             var play = new Play {
                 Score = await scoreGenerator.GenerateScoreForUser(userId),
-                DateTimestamp = DateTime.UtcNow.ToUnixTime(),
+                DateTimestamp = clock.Now().ToUnixTime(),
                 Id = Guid.NewGuid(),
                 MatchId = matchId,
                 UserId = userId
