@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Cleverbit.CodingTask.Application\Cleverbit.CodingTask.Application.csproj" />
   </ItemGroup>
 

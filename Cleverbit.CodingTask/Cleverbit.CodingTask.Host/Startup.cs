@@ -55,6 +55,8 @@ namespace Cleverbit.CodingTask.Host {
 
             services.AddAuthentication("BasicAuthentication")
                 .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
+            services.AddSwaggerGen();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -76,6 +78,16 @@ namespace Cleverbit.CodingTask.Host {
                 FileProvider = new PhysicalFileProvider(
                     Path.Combine(env.ContentRootPath, "Views")),
                 RequestPath = "/Views"
+            });
+
+            // Enable middleware to serve generated Swagger as a JSON endpoint.
+            app.UseSwagger();
+
+            // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.),
+            // specifying the Swagger JSON endpoint.
+            app.UseSwaggerUI(c => {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Cleverbit V1");
+                c.RoutePrefix = string.Empty;
             });
 
             app.UseRouting();
