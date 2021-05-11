@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
-using System.Security.Claims;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -9,7 +7,7 @@ namespace Cleverbit.CodingTask.Host.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PingController : ControllerBase
+    public class PingController : BaseController
     {
         // GET: api/ping
         [HttpGet]
@@ -23,7 +21,7 @@ namespace Cleverbit.CodingTask.Host.Controllers
         [Authorize]
         public string GetWithAuth()
         {
-            return $"Ping received with successful authorization. User Name : {User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name)?.Value}";
+            return $"Ping received with successful authorization. User Name : {GetUserName()}";
         }
     }
 }

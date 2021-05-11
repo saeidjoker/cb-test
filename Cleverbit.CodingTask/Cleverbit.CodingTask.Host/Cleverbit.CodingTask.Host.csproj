@@ -5,7 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cleverbit.CodingTask.Data\Cleverbit.CodingTask.Data.csproj" />
+    <_WebToolingArtifacts Remove="Properties\launchSettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Properties\launchSettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cleverbit.CodingTask.Application\Cleverbit.CodingTask.Application.csproj" />
   </ItemGroup>
 
 </Project>
